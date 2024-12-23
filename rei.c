@@ -4,16 +4,13 @@
 
 int fuzzy_find(char needle[], char haystack[]) {
   for (int i = 0; i < strlen(needle); i++) {
-
     int found_character = 0;
-
     for (int j = 0; j < strlen(haystack); j++) {
       if (needle[i] == haystack[j]) {
         found_character = 1;
         break;
       }
     }
-
     if (found_character == 0) {
       return 0;
     }
@@ -23,6 +20,7 @@ int fuzzy_find(char needle[], char haystack[]) {
 }
 
 int main() {
+
   initscr();
 
   int term_width, term_height;
@@ -71,5 +69,3 @@ int main() {
 
   return 0;
 }
-
-/* build and run: cc -o rei rei.c -lncurses && ./rei */
