@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <dirent.h>
 #include <ncurses.h>
 #include <string.h>
@@ -6,7 +7,7 @@ int fuzzy_find(char needle[], char haystack[]) {
   for (int i = 0; i < strlen(needle); i++) {
     int found_character = 0;
     for (int j = 0; j < strlen(haystack); j++) {
-      if (needle[i] == haystack[j]) {
+      if (tolower(needle[i]) == tolower(haystack[j])) {
         found_character = 1;
         break;
       }
@@ -23,9 +24,11 @@ int main() {
 
   initscr();
 
+  /* getting current window width and height */
   int term_width, term_height;
   getmaxyx(stdscr, term_height, term_width);
 
+  /* creating input and output windows */
   WINDOW *inputwin = newwin(3, term_width - 12, 1, 5);
   WINDOW *outputwin = newwin(term_height - 20, term_width - 12, 5, 5);
 
