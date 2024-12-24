@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <ncurses.h>
+#include <stdlib.h>
 #include <string.h>
 
 int fuzzy_find(char needle[], char haystack[]) {
@@ -20,42 +21,17 @@ int fuzzy_find(char needle[], char haystack[]) {
   return 1;
 }
 
-void fuzzy_find_directory(char query[], char directory[], int *found_needle,
-                          WINDOW *inputwin, WINDOW *outputwin) {
+void append_string(char ***haybales, int *haybale_last_index, char *full_path) {
+  *haybales = realloc(*haybales, (*haybale_last_index + 1) * sizeof(char *));
 
-  struct dirent *de;
-  DIR *dr = opendir(directory);
+  (*haybales)[*haybale_last_index] = malloc(strlen(full_path) + 1);
+  strcpy((*haybales)[*haybale_last_index], full_path);
 
-  while ((de = readdir(dr)) != NULL) {
-    wrefresh(outputwin);
-    if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
-      continue;
-    }
-    if (de->d_type == 4) {
-      char child_path[4096];
-      snprintf(child_path, sizeof(child_path), "%s/%s", directory, de->d_name);
-      fuzzy_find_directory(query, child_path, found_needle, inputwin,
-                           outputwin);
-    } else {
-      if (fuzzy_find(query, de->d_name)) {
-        *found_needle = 1;
-        if (strcmp(directory, "./") != 0) {
-          char *chopped_dir = directory + 3;
-          wprintw(outputwin, "%s/%s\n", chopped_dir, de->d_name);
-        } else {
-          wprintw(outputwin, "%s\n", de->d_name);
-        }
-        wmove(inputwin, 0, strlen(query));
-        wrefresh(outputwin);
-      }
-    }
-  }
-
-  closedir(dr);
+  (*haybale_last_index)++;
 }
 
-void render_all_files(char directory[], WINDOW *inputwin, WINDOW *outputwin) {
-
+void get_haybales(char ***haybales, int *haybale_last_index, char directory[],
+                  WINDOW *inputwin, WINDOW *outputwin) {
   struct dirent *de;
   DIR *dr = opendir(directory);
 
@@ -67,15 +43,18 @@ void render_all_files(char directory[], WINDOW *inputwin, WINDOW *outputwin) {
     if (de->d_type == 4) {
       char child_path[4096];
       snprintf(child_path, sizeof(child_path), "%s/%s", directory, de->d_name);
-      render_all_files(child_path, inputwin, outputwin);
+      get_haybales(haybales, haybale_last_index, child_path, inputwin,
+                   outputwin);
     } else {
       if (strcmp(directory, "./") != 0) {
         char *chopped_dir = directory + 3;
-        wprintw(outputwin, "%s/%s\n", chopped_dir, de->d_name);
+        char full_path[4096];
+        snprintf(full_path, sizeof(full_path), "%s/%s", chopped_dir,
+                 de->d_name);
+        append_string(haybales, haybale_last_index, full_path);
       } else {
-        wprintw(outputwin, "%s\n", de->d_name);
+        append_string(haybales, haybale_last_index, de->d_name);
       }
-      wrefresh(outputwin);
     }
   }
 
@@ -83,7 +62,6 @@ void render_all_files(char directory[], WINDOW *inputwin, WINDOW *outputwin) {
 }
 
 int main() {
-
   initscr();
 
   /* getting current window width and height */
@@ -96,9 +74,19 @@ int main() {
   scrollok(outputwin, TRUE);
 
   /* display all files when query empty  */
-  render_all_files("./", inputwin, outputwin);
 
   char query[100], c;
+
+  char **haybale = NULL;
+
+  int haybale_last_index = 0;
+
+  get_haybales(&haybale, &haybale_last_index, "./", inputwin, outputwin);
+
+  for (int i = 0; i < haybale_last_index; i++) {
+    wprintw(outputwin, "%s\n", haybale[i]);
+  }
+  wrefresh(outputwin);
 
   while ((c = wgetch(inputwin)) != '\n') {
     if (c == 127) {
@@ -108,19 +96,31 @@ int main() {
     } else {
       strncat(query, &c, 1);
     }
-
     wclear(outputwin);
 
     int found_needle = 0;
 
-    fuzzy_find_directory(query, "./", &found_needle, inputwin, outputwin);
+    for (int i = 0; i < haybale_last_index; i++) {
+      if (fuzzy_find(query, haybale[i]) == 1) {
+        found_needle = 1;
+        wprintw(outputwin, "%s\n", haybale[i]);
+      }
+    }
+
+    wrefresh(outputwin);
 
     if (found_needle == 0) {
       wprintw(outputwin, "no files match your query");
-      wmove(inputwin, 0, strlen(query));
       wrefresh(outputwin);
     }
+
+    wmove(inputwin, 0, strlen(query));
   }
+
+  for (int i = 0; i < haybale_last_index; i++) {
+    free(haybale[i]);
+  }
+  free(haybale);
 
   endwin();
 
