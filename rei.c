@@ -22,20 +22,9 @@ int fuzzy_find(char needle[], char haystack[]) {
 }
 
 void append_string(char ***array, int *last_index, char *new_string) {
-  char **temp = realloc(*array, (*last_index + 1) * sizeof(char *));
-  if (temp == NULL) {
-    // Handle memory allocation failure (e.g., print error and exit)
-    perror("Memory allocation failed");
-    exit(1);
-  }
-  *array = temp;
+  *array = realloc(*array, (*last_index + 1) * sizeof(char *));
 
   (*array)[*last_index] = malloc(strlen(new_string) + 1);
-  if ((*array)[*last_index] == NULL) {
-    // Handle memory allocation failure
-    perror("Memory allocation failed");
-    exit(1);
-  }
   strcpy((*array)[*last_index], new_string);
 
   (*last_index)++;
