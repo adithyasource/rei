@@ -73,13 +73,13 @@ void get_haybales(char ***haybales, int *haybale_last_index, char directory[],
 }
 
 void render_output_list(char query[], int haybale_last_index, char **haybale,
-                        int highlight_index, WINDOW *inputwin,
+                        int highlight_index, int max_height, WINDOW *inputwin,
                         WINDOW *outputwin) {
   int found_needle = 0;
 
   char **results = NULL;
 
-  for (int i = 0; i < haybale_last_index; i++) {
+  for (int i = 0; i < haybale_last_index && i < max_height; i++) {
     if (fuzzy_find(query, haybale[i]) == 1) {
       append_string(&results, &found_needle, haybale[i]);
       found_needle += 1;
@@ -160,7 +160,7 @@ int main() {
   /* creating input and output windows */
   WINDOW *inputwin = newwin(3, term_width - 12, 1, 3);
   WINDOW *outputwin = newwin(term_height - 8, term_width - 12, 5, 3);
-  /*scrollok(outputwin, TRUE);*/
+  scrollok(outputwin, FALSE);
   intrflush(inputwin, FALSE);
   keypad(inputwin, TRUE);
 
@@ -176,7 +176,7 @@ int main() {
 
   int highlight_index = 0;
 
-  for (int i = 0; i < haybale_last_index; i++) {
+  for (int i = 0; i < haybale_last_index && i < term_height - 8; i++) {
     if (highlight_index == i) {
       wattron(outputwin, COLOR_PAIR(1));
     }
@@ -223,7 +223,7 @@ int main() {
     wclear(outputwin);
 
     render_output_list(query, haybale_last_index, haybale, highlight_index,
-                       inputwin, outputwin);
+                       term_height - 8, inputwin, outputwin);
   }
 
   for (int i = 0; i < haybale_last_index; i++) {
