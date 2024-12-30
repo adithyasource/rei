@@ -22,9 +22,20 @@ int fuzzy_find(char needle[], char haystack[]) {
 }
 
 void append_string(char ***array, int *last_index, char *new_string) {
-  *array = realloc(*array, (*last_index + 1) * sizeof(char *));
+  char **temp = realloc(*array, (*last_index + 1) * sizeof(char *));
+  if (temp == NULL) {
+    // Handle memory allocation failure (e.g., print error and exit)
+    perror("Memory allocation failed");
+    exit(1);
+  }
+  *array = temp;
 
   (*array)[*last_index] = malloc(strlen(new_string) + 1);
+  if ((*array)[*last_index] == NULL) {
+    // Handle memory allocation failure
+    perror("Memory allocation failed");
+    exit(1);
+  }
   strcpy((*array)[*last_index], new_string);
 
   (*last_index)++;
@@ -181,38 +192,38 @@ int main() {
       /* enter key */
       choose_result(query, haybale_last_index, haybale, highlight_index,
                     inputwin);
-    } else {
-
-      switch (c) {
-      case (127):
-        /* backspace key */
-        werase(inputwin);
-        query[strlen(query) - 1] = '\0';
-        wprintw(inputwin, "%s", query);
-        highlight_index = 0;
-        break;
-
-      case (KEY_UP):
-        if (highlight_index <= 0)
-          break;
-        highlight_index -= 2;
-        break;
-
-      case (KEY_DOWN):
-        highlight_index += 2;
-        break;
-
-      default:
-        strncat(query, (char *)&c, 1);
-        highlight_index = 0;
-        break;
-      }
-
-      wclear(outputwin);
-
-      render_output_list(query, haybale_last_index, haybale, highlight_index,
-                         inputwin, outputwin);
+      break;
     }
+
+    switch (c) {
+    case (127):
+      /* backspace key */
+      werase(inputwin);
+      query[strlen(query) - 1] = '\0';
+      wprintw(inputwin, "%s", query);
+      highlight_index = 0;
+      break;
+
+    case (KEY_UP):
+      if (highlight_index <= 0)
+        break;
+      highlight_index -= 2;
+      break;
+
+    case (KEY_DOWN):
+      highlight_index += 2;
+      break;
+
+    default:
+      strncat(query, (char *)&c, 1);
+      highlight_index = 0;
+      break;
+    }
+
+    wclear(outputwin);
+
+    render_output_list(query, haybale_last_index, haybale, highlight_index,
+                       inputwin, outputwin);
   }
 
   for (int i = 0; i < haybale_last_index; i++) {
