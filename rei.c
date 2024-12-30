@@ -73,7 +73,7 @@ void get_haybales(char ***haybales, int *haybale_last_index, char directory[],
 }
 
 void render_output_list(char query[], int haybale_last_index, char **haybale,
-                        int highlight_index, int max_height, WINDOW *inputwin,
+                        int *highlight_index, int max_height, WINDOW *inputwin,
                         WINDOW *outputwin) {
   int found_needle = 0;
 
@@ -86,15 +86,23 @@ void render_output_list(char query[], int haybale_last_index, char **haybale,
     }
   }
 
+  if (*highlight_index <= 0) {
+    *highlight_index = 0;
+  }
+
+  if (*highlight_index >= found_needle - 2) {
+    *highlight_index = found_needle - 2;
+  }
+
   for (int i = 0; i < found_needle; i++) {
     if (results[i] == NULL)
       continue;
 
-    if (highlight_index == i) {
+    if (*highlight_index == i) {
       wattron(outputwin, COLOR_PAIR(1));
     }
     wprintw(outputwin, "%s\n", results[i]);
-    if (highlight_index == i) {
+    if (*highlight_index == i) {
       wattroff(outputwin, COLOR_PAIR(1));
     }
     free(results[i]);
@@ -205,8 +213,6 @@ int main() {
       break;
 
     case (KEY_UP):
-      if (highlight_index <= 0)
-        break;
       highlight_index -= 2;
       break;
 
@@ -222,7 +228,7 @@ int main() {
 
     wclear(outputwin);
 
-    render_output_list(query, haybale_last_index, haybale, highlight_index,
+    render_output_list(query, haybale_last_index, haybale, &highlight_index,
                        term_height - 8, inputwin, outputwin);
   }
 
