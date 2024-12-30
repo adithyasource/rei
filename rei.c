@@ -21,13 +21,13 @@ int fuzzy_find(char needle[], char haystack[]) {
   return 1;
 }
 
-void append_string(char ***haybales, int *haybale_last_index, char *full_path) {
-  *haybales = realloc(*haybales, (*haybale_last_index + 1) * sizeof(char *));
+void append_string(char ***array, int *last_index, char *new_string) {
+  *array = realloc(*array, (*last_index + 1) * sizeof(char *));
 
-  (*haybales)[*haybale_last_index] = malloc(strlen(full_path) + 1);
-  strcpy((*haybales)[*haybale_last_index], full_path);
+  (*array)[*last_index] = malloc(strlen(new_string) + 1);
+  strcpy((*array)[*last_index], new_string);
 
-  (*haybale_last_index)++;
+  (*last_index)++;
 }
 
 void get_haybales(char ***haybales, int *haybale_last_index, char directory[],
@@ -61,8 +61,50 @@ void get_haybales(char ***haybales, int *haybale_last_index, char directory[],
   closedir(dr);
 }
 
+void render_output_list(char query[], int haybale_last_index, char **haybale,
+                        int highlight_index, WINDOW *inputwin,
+                        WINDOW *outputwin) {
+  int found_needle = 0;
+
+  char **results = NULL;
+
+  for (int i = 0; i < haybale_last_index; i++) {
+    if (fuzzy_find(query, haybale[i]) == 1) {
+      append_string(&results, &found_needle, haybale[i]);
+      found_needle += 1;
+    }
+  }
+
+  for (int i = 0; i < found_needle; i++) {
+    if (results[i] == NULL)
+      continue;
+
+    if (highlight_index == i) {
+      wattron(outputwin, COLOR_PAIR(1));
+    }
+    wprintw(outputwin, "%s\n", results[i]);
+    if (highlight_index == i) {
+      wattroff(outputwin, COLOR_PAIR(1));
+    }
+    free(results[i]);
+  }
+  free(results);
+
+  wrefresh(outputwin);
+
+  if (found_needle == 0) {
+    wprintw(outputwin, "no files match your query");
+    wrefresh(outputwin);
+  }
+
+  wmove(inputwin, 0, strlen(query));
+}
+
 int main() {
   initscr();
+  start_color();
+
+  init_pair(1, COLOR_BLACK, COLOR_WHITE);
 
   /* getting current window width and height */
   int term_width, term_height;
@@ -71,11 +113,13 @@ int main() {
   /* creating input and output windows */
   WINDOW *inputwin = newwin(3, term_width - 12, 1, 3);
   WINDOW *outputwin = newwin(term_height - 8, term_width - 12, 5, 3);
-  scrollok(outputwin, TRUE);
+  /*scrollok(outputwin, TRUE);*/
+  intrflush(inputwin, FALSE);
+  keypad(inputwin, TRUE);
 
   /* display all files when query empty  */
-
-  char query[100], c;
+  char query[100];
+  int c;
 
   char **haybale = NULL;
 
@@ -83,38 +127,48 @@ int main() {
 
   get_haybales(&haybale, &haybale_last_index, "./", inputwin, outputwin);
 
+  int highlight_index = 0;
+
   for (int i = 0; i < haybale_last_index; i++) {
+    if (highlight_index == i) {
+      wattron(outputwin, COLOR_PAIR(1));
+    }
     wprintw(outputwin, "%s\n", haybale[i]);
+    if (highlight_index == i) {
+      wattroff(outputwin, COLOR_PAIR(1));
+    }
   }
   wrefresh(outputwin);
 
   while ((c = wgetch(inputwin)) != '\n') {
-    if (c == 127) {
+    switch (c) {
+    case (127):
       werase(inputwin);
       query[strlen(query) - 1] = '\0';
       wprintw(inputwin, "%s", query);
-    } else {
-      strncat(query, &c, 1);
+      highlight_index = 0;
+      break;
+
+    case (KEY_UP):
+      if (highlight_index <= 0)
+        break;
+      highlight_index -= 2;
+      break;
+
+    case (KEY_DOWN):
+      highlight_index += 2;
+      break;
+
+    default:
+      strncat(query, (char *)&c, 1);
+      highlight_index = 0;
+      break;
     }
+
     wclear(outputwin);
 
-    int found_needle = 0;
-
-    for (int i = 0; i < haybale_last_index; i++) {
-      if (fuzzy_find(query, haybale[i]) == 1) {
-        found_needle = 1;
-        wprintw(outputwin, "%s\n", haybale[i]);
-      }
-    }
-
-    wrefresh(outputwin);
-
-    if (found_needle == 0) {
-      wprintw(outputwin, "no files match your query");
-      wrefresh(outputwin);
-    }
-
-    wmove(inputwin, 0, strlen(query));
+    render_output_list(query, haybale_last_index, haybale, highlight_index,
+                       inputwin, outputwin);
   }
 
   for (int i = 0; i < haybale_last_index; i++) {
