@@ -100,6 +100,42 @@ void render_output_list(char query[], int haybale_last_index, char **haybale,
   wmove(inputwin, 0, strlen(query));
 }
 
+void choose_result(char query[], int haybale_last_index, char **haybale,
+                   int highlight_index, WINDOW *inputwin) {
+  int found_needle = 0;
+
+  char **results = NULL;
+
+  for (int i = 0; i < haybale_last_index; i++) {
+    if (fuzzy_find(query, haybale[i]) == 1) {
+      append_string(&results, &found_needle, haybale[i]);
+      found_needle += 1;
+    }
+  }
+
+  for (int i = 0; i < found_needle; i++) {
+    if (results[i] == NULL)
+      continue;
+
+    if (highlight_index == i) {
+      endwin();
+
+      printf("%s\n", results[i]);
+      fflush(stdout);
+
+      for (int i = 0; i < haybale_last_index; i++) {
+        free(haybale[i]);
+      }
+      free(haybale);
+
+      exit(0);
+    }
+
+    free(results[i]);
+  }
+  free(results);
+}
+
 int main() {
   initscr();
   start_color();
@@ -140,35 +176,43 @@ int main() {
   }
   wrefresh(outputwin);
 
-  while ((c = wgetch(inputwin)) != '\n') {
-    switch (c) {
-    case (127):
-      werase(inputwin);
-      query[strlen(query) - 1] = '\0';
-      wprintw(inputwin, "%s", query);
-      highlight_index = 0;
-      break;
+  while ((c = wgetch(inputwin))) {
+    if (c == 10) {
+      /* enter key */
+      choose_result(query, haybale_last_index, haybale, highlight_index,
+                    inputwin);
+    } else {
 
-    case (KEY_UP):
-      if (highlight_index <= 0)
+      switch (c) {
+      case (127):
+        /* backspace key */
+        werase(inputwin);
+        query[strlen(query) - 1] = '\0';
+        wprintw(inputwin, "%s", query);
+        highlight_index = 0;
         break;
-      highlight_index -= 2;
-      break;
 
-    case (KEY_DOWN):
-      highlight_index += 2;
-      break;
+      case (KEY_UP):
+        if (highlight_index <= 0)
+          break;
+        highlight_index -= 2;
+        break;
 
-    default:
-      strncat(query, (char *)&c, 1);
-      highlight_index = 0;
-      break;
+      case (KEY_DOWN):
+        highlight_index += 2;
+        break;
+
+      default:
+        strncat(query, (char *)&c, 1);
+        highlight_index = 0;
+        break;
+      }
+
+      wclear(outputwin);
+
+      render_output_list(query, haybale_last_index, haybale, highlight_index,
+                         inputwin, outputwin);
     }
-
-    wclear(outputwin);
-
-    render_output_list(query, haybale_last_index, haybale, highlight_index,
-                       inputwin, outputwin);
   }
 
   for (int i = 0; i < haybale_last_index; i++) {
