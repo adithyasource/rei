@@ -68,7 +68,7 @@ void render_output_list(char query[], int haybale_last_index, char **haybale,
 
   char **results = NULL;
 
-  for (int i = 0; i < haybale_last_index && i < max_height; i++) {
+  for (int i = 0; i < haybale_last_index; i++) {
     if (fuzzy_find(query, haybale[i]) == 1) {
       append_string(&results, &found_needle, haybale[i]);
       found_needle += 1;
@@ -83,7 +83,7 @@ void render_output_list(char query[], int haybale_last_index, char **haybale,
     *highlight_index = found_needle - 2;
   }
 
-  for (int i = 0; i < found_needle; i++) {
+  for (int i = 0; i < found_needle && i < (max_height * 2); i++) {
     if (results[i] == NULL)
       continue;
 
